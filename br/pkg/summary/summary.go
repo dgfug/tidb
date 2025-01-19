@@ -2,7 +2,16 @@
 
 package summary
 
-import "time"
+import (
+	"sync/atomic"
+	"time"
+
+	"go.uber.org/zap"
+)
+
+var (
+	lastStatus atomic.Bool
+)
 
 // SetUnit set unit "backup/restore" for summary log.
 func SetUnit(unit string) {
@@ -10,7 +19,7 @@ func SetUnit(unit string) {
 }
 
 // CollectSuccessUnit collects success time costs.
-func CollectSuccessUnit(name string, unitCount int, arg interface{}) {
+func CollectSuccessUnit(name string, unitCount int, arg any) {
 	collector.CollectSuccessUnit(name, unitCount, arg)
 }
 
@@ -36,10 +45,30 @@ func CollectUint(name string, t uint64) {
 
 // SetSuccessStatus sets final success status.
 func SetSuccessStatus(success bool) {
+	lastStatus.Store(success)
 	collector.SetSuccessStatus(success)
+}
+
+// Succeed returns whether the last call to `SetSuccessStatus` passes `true`.
+func Succeed() bool {
+	return lastStatus.Load()
+}
+
+// NowDureTime returns the duration between start time and current time
+func NowDureTime() time.Duration {
+	return collector.NowDureTime()
+}
+
+func AdjustStartTimeToEarlierTime(t time.Duration) {
+	collector.AdjustStartTimeToEarlierTime(t)
 }
 
 // Summary outputs summary log.
 func Summary(name string) {
 	collector.Summary(name)
+}
+
+// Log outputs log.
+func Log(msg string, fields ...zap.Field) {
+	collector.Log(msg, fields...)
 }
